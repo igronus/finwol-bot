@@ -3,6 +3,9 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import os
 from dotenv import load_dotenv
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import quote
 
 # Enable logging
 logging.basicConfig(
@@ -32,19 +35,39 @@ Just send any message and I'll respond!
     """
     await update.message.reply_text(help_text)
 
+async def analyze_word(word: str) -> str:
+    """Fetch word analysis from Lingsoft service"""
+    try:
+        url = f"http://www2.lingsoft.fi/cgi-bin/fintwol?word={quote(word)}"
+        response = requests.get(url)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        pre_tag = soup.find('pre')
+        
+        if pre_tag:
+            return pre_tag.text.strip()
+        return "No analysis found"
+    except Exception as e:
+        logging.error(f"Error analyzing word: {e}")
+        return "Sorry, there was an error analyzing the word"
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle all incoming messages."""
     message_text = update.message.text.lower()
     
-    # Simple response logic
-    if 'hello' in message_text or 'hi' in message_text:
-        response = "Hello! How are you?"
-    elif 'how are you' in message_text:
-        response = "I'm doing great, thanks for asking! How about you?"
-    elif 'bye' in message_text:
+    # Check for basic greetings first
+    if message_text in ['hello', 'hi']:
+        response = "Hello! Send me any Finnish word to analyze it!"
+    elif message_text == 'how are you':
+        response = "I'm doing great! Send me a word to analyze!"
+    elif message_text == 'bye':
         response = "Goodbye! Have a great day! 👋"
     else:
-        response = "I received your message: " + update.message.text
+        # Analyze the word
+        await update.message.reply_text(f"Analyzing word: {message_text}...")
+        analysis = await analyze_word(message_text)
+        response = f"Analysis for '{message_text}':\n\n{analysis}"
 
     await update.message.reply_text(response)
 
