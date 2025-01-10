@@ -113,10 +113,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif message_text == 'bye':
         response = "Goodbye! Have a great day! 👋"
     else:
-        # Analyze the word
-        await update.message.reply_text(f"Analyzing word: {message_text}...")
-        analysis = await analyze_word(message_text)
-        response = f"Analysis for '{message_text}':\n\n{analysis}"
+        # Split message into unique words
+        words = list(dict.fromkeys(message_text.split()))
+        if len(words) > 1:
+            await update.message.reply_text(f"Analyzing {len(words)} unique words...")
+            analyses = []
+            for word in words:
+                analysis = await analyze_word(word)
+                analyses.append(f"Analysis for '{word}':\n{analysis}\n")
+            response = "\n".join(analyses)
+        else:
+            # Single word analysis
+            word = words[0]  # Use the first (and only) word
+            await update.message.reply_text(f"Analyzing word: {word}")
+            analysis = await analyze_word(word)
+            response = f"Analysis for '{word}':\n\n{analysis}"
 
     await update.message.reply_text(response)
 
