@@ -96,7 +96,7 @@ async def analyze_word(word: str) -> str:
             # Save to DB before returning
             await save_word_to_db(word, analysis)
             return analysis
-        return "No analysis found"
+        return "No data received. Either a service error or a limit have been reached (100 requests per day). Please try again later."
     except Exception as e:
         logging.error(f"Error analyzing word: {e}")
         return "Sorry, there was an error analyzing the word"
