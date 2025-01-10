@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote
+import sqlite3
+from datetime import datetime
 
 # Enable logging
 logging.basicConfig(
@@ -35,8 +37,49 @@ Just send any message and I'll respond!
     """
     await update.message.reply_text(help_text)
 
+def init_db():
+    """Initialize the database"""
+    conn = sqlite3.connect('words.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS word_analyses (
+            word TEXT PRIMARY KEY,
+            analysis TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+async def get_word_from_db(word: str) -> str | None:
+    """Get word analysis from database"""
+    conn = sqlite3.connect('words.db')
+    c = conn.cursor()
+    c.execute('SELECT analysis FROM word_analyses WHERE word = ?', (word,))
+    result = c.fetchone()
+    conn.close()
+    return result[0] if result else None
+
+async def save_word_to_db(word: str, analysis: str):
+    """Save word analysis to database"""
+    conn = sqlite3.connect('words.db')
+    c = conn.cursor()
+    c.execute(
+        'INSERT OR REPLACE INTO word_analyses (word, analysis) VALUES (?, ?)',
+        (word, analysis)
+    )
+    conn.commit()
+    conn.close()
+
 async def analyze_word(word: str) -> str:
-    """Fetch word analysis from Lingsoft service"""
+    """Fetch word analysis from DB or Lingsoft service"""
+    # First try to get from DB
+    cached_analysis = await get_word_from_db(word)
+    if cached_analysis:
+        logging.info(f"Found analysis for '{word}' in cache")
+        return cached_analysis
+
+    # If not in DB, fetch from service
     try:
         url = f"http://www2.lingsoft.fi/cgi-bin/fintwol?word={quote(word)}"
         response = requests.get(url)
@@ -46,7 +89,10 @@ async def analyze_word(word: str) -> str:
         pre_tag = soup.find('pre')
         
         if pre_tag:
-            return pre_tag.text.strip()
+            analysis = pre_tag.text.strip()
+            # Save to DB before returning
+            await save_word_to_db(word, analysis)
+            return analysis
         return "No analysis found"
     except Exception as e:
         logging.error(f"Error analyzing word: {e}")
@@ -73,6 +119,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     """Start the bot."""
+    # Initialize the database
+    init_db()
+    
     # Create the Application
     application = Application.builder().token(TOKEN).build()
 
