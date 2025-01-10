@@ -81,7 +81,10 @@ async def analyze_word(word: str) -> str:
 
     # If not in DB, fetch from service
     try:
-        url = f"http://www2.lingsoft.fi/cgi-bin/fintwol?word={quote(word)}"
+        # Custom encoding for Finnish characters
+        encoded_word = word.replace('ä', '%E4').replace('ö', '%F6').replace('å', '%E5')
+        url = f"http://www2.lingsoft.fi/cgi-bin/fintwol?word={encoded_word}"
+        logging.info(f"Fetching data from '{url}'")
         response = requests.get(url)
         response.raise_for_status()
         
