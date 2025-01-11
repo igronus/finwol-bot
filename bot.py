@@ -20,6 +20,7 @@ load_dotenv()
 
 # Get token from environment variable
 TOKEN = os.getenv('BOT_TOKEN')
+ERROR_MESSAGE = os.getenv('ERROR_MESSAGE')
 
 # Command handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -96,7 +97,7 @@ async def analyze_word(word: str) -> str:
             # Save to DB before returning
             await save_word_to_db(word, analysis)
             return analysis
-        return "No data received. Either a service error or a limit have been reached (100 requests per day). Please try again later."
+        return ERROR_MESSAGE or "Something is wrong. Please try again later."
     except Exception as e:
         logging.error(f"Error analyzing word: {e}")
         return "Sorry, there was an error analyzing the word"
@@ -125,7 +126,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             # Single word analysis
             word = words[0]  # Use the first (and only) word
-            await update.message.reply_text(f"Analyzing word: {word}")
+            await update.message.reply_text(f"Analyzing word: {word}...")
             analysis = await analyze_word(word)
             response = f"Analysis for '{word}':\n\n{analysis}"
 
