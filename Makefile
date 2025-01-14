@@ -1,14 +1,21 @@
-.PHONY: run install clean
+.PHONY: run install install36 clean
 
 # Default Python interpreter
 PYTHON = python3
 VENV = venv
 BIN = $(VENV)/bin
 
-# Install dependencies
+# Install dependencies for Python 3.7+
 install:
 	$(PYTHON) -m venv $(VENV)
+	$(BIN)/pip install --upgrade pip
 	$(BIN)/pip install -r requirements.txt
+
+# Install dependencies for Python 3.6
+install36:
+	$(PYTHON) -m venv $(VENV)
+	$(BIN)/pip install --upgrade pip
+	$(BIN)/pip install -r requirements36.txt
 
 # Run bot with auto-restart
 run:
